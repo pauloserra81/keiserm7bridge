@@ -50,11 +50,17 @@ class MyAdvertisedDeviceCallbacks : public BLEAdvertisedDeviceCallbacks
           if ( advertisedDevice.getName() == "M7" && cManufacturerData[0] == 0x02 && cManufacturerData[1] == 0x01)
           {
             Serial.println("Found a Keiser M7!");
+
+            if ( cManufacturerData[4] == 0x00  ) //real time data
+           {
             powerReadings.power = cManufacturerData[10]+(256*cManufacturerData[11]);
             powerReadings.cadence = cManufacturerData[6]+(256*cManufacturerData[7]);
-
             Serial.printf("Power is [%d] W\n", powerReadings.power );
             Serial.printf("Cadence is [%d] rpm\n", powerReadings.cadence);
+           } else {
+            powerReadings.power = 0;
+            powerReadings.cadence = 0;
+            }
 
             // Send message via ESP-NOW
             esp_err_t result = esp_now_send(broadcastAddress, (uint8_t *) &powerReadings, sizeof(powerReadings));
@@ -64,8 +70,8 @@ class MyAdvertisedDeviceCallbacks : public BLEAdvertisedDeviceCallbacks
              else {
              Serial.println("Error sending the data");
               }
-            
           }
+          
          }
         return;     
    }
