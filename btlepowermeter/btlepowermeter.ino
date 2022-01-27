@@ -3,7 +3,8 @@
 #include <BLEUtils.h>
 #include <BLE2902.h>
 #include <Arduino.h>
-
+#include <esp_now.h>
+#include <WiFi.h>
 
 extern bool deviceConnected;
 extern bool oldDeviceConnected;
@@ -64,7 +65,7 @@ public:
     {
         //pinMode(LED_PIN, OUTPUT);
         // Create the BLE Device
-        BLEDevice::init("DalesWifeBike"); // weirdly enough names with spaces do not seem to work
+        BLEDevice::init("KeiserSoze"); // weirdly enough names with spaces do not seem to work
 
         // Create the BLE Server
         pServer = BLEDevice::createServer();
@@ -152,13 +153,35 @@ public:
 
 BLEPowerCSC *bluetooth = new BLEPowerCSC();
 
+typedef struct struct_message {
+uint16_t power;
+uint16_t cadence;
+} struct_message;
+
+//reading holder
+struct_message powerReadings;
+
 void setup()
 {
+  Serial.begin(115200);
   bluetooth->initialize();
+
+  //initialize ESP-NOW to get the power data from other board
+  WiFi.mode(WIFI_STA);
+  if (esp_now_init() != ESP_OK) {
+  Serial.println("Error initializing ESP-NOW");
+  return;
+  }
+  
+  esp_now_register_recv_cb(OnDataRecv);
+
+  //initialize values
+  powerReadings.power =10;
+  powerReadings.cadence =1130;
 }
 
+       
 //reading holders
-int16_t powerReading = 0;           //in W
 uint64_t cumulativeRevolutions = 0; //a represents the total number of times a crank rotates
 uint64_t lastCET = 0;        
 /*lastCrankEvent: The 'crank event time' is a free-running-count of 1/1024 second units and it 
@@ -171,24 +194,31 @@ represents the time when the crank revolution was detected by the crank rotation
 /*Cadence = (Difference in two successive Cumulative Crank Revolution values) /
 (Difference in two successive Last Crank Event Time values)
 */
-
+// Callback when data is received
+void OnDataRecv(const uint8_t * mac, const uint8_t *incomingData, int len) {
+  memcpy(&powerReadings, incomingData, sizeof(powerReadings));
+  Serial.print("Bytes received: ");
+  Serial.println(len);
+  Serial.println(powerReadings.cadence);
+  Serial.println(powerReadings.power);
+}
 
 bool deviceConnected = false;
 bool oldDeviceConnected = false;
-uint16_t loopDelay = 2024U; //to help in artificial rpm generation
+uint16_t loopDelay = 1024U; //to help in artificial rpm generation
 
 void loop()
 {
   // notify changed value
   if (deviceConnected)
   {
-    //get data  (fake for now will come from ESP-NOW)
-    powerReading += 3;
-    cumulativeRevolutions+=1; //hard set for 30rpm
-    lastCET+=loopDelay; //hard set for 30rpm
 
+    if (powerReadings.cadence > 0 ) {
+    cumulativeRevolutions+=1; 
+    lastCET+=loopDelay*600.0/powerReadings.cadence;
+    }
     //BLE Transmit
-    bluetooth->sendPower(powerReading);
+    bluetooth->sendPower(powerReadings.power);
     bluetooth->sendCSC(lastCET, cumulativeRevolutions);
 
     delay(loopDelay); // the minimum is 3ms according to official docs
