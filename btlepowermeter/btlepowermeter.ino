@@ -20,6 +20,9 @@ extern bool oldDeviceConnected;
 #define powerFlags 0b0000000000000000;
 #define CSCFlags 0b10; //todo is it good practice to define flags up here?
 
+//Change this to scale power numbers i.e. set to 2 to double power
+float POWERFACTOR =10;
+
 class MyServerCallbacks : public BLEServerCallbacks
 {
 private:
@@ -176,8 +179,8 @@ void setup()
   esp_now_register_recv_cb(OnDataRecv);
 
   //initialize values
-  powerReadings.power =10;
-  powerReadings.cadence =1130;
+  powerReadings.power =0;
+  powerReadings.cadence =0;
 }
 
        
@@ -218,7 +221,8 @@ void loop()
     lastCET+=loopDelay*600.0/powerReadings.cadence;
     }
     //BLE Transmit
-    bluetooth->sendPower(powerReadings.power);
+    uint16_t txPower = powerReadings.power * POWERFACTOR ;
+    bluetooth->sendPower(txPower);
     bluetooth->sendCSC(lastCET, cumulativeRevolutions);
 
     delay(loopDelay); // the minimum is 3ms according to official docs
