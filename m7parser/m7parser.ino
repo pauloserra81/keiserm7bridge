@@ -23,8 +23,7 @@ uint16_t cadence;
 } struct_message;
 
 //paste HERE the address you got from running the wifi mac address finder on the RECEIVER board
-uint8_t broadcastAddress[] = {0x50, 0x02, 0x91, 0x88, 0x4F, 0x41};
-//uint8_t broadcastAddress[] = {0x50, 0x02, 0x91, 0x88, 0x4F, 0x40};
+uint8_t broadcastAddress[] = {0x50, 0x02, 0x91, 0x88, 0x4F, 0x40};
 
 // Callback when data is sent
 void OnDataSent(const uint8_t *mac_addr, esp_now_send_status_t status) {
@@ -103,7 +102,7 @@ void setup()
   pBLEScan = BLEDevice::getScan(); //create new scan
   pBLEScan->setAdvertisedDeviceCallbacks(new MyAdvertisedDeviceCallbacks());
   pBLEScan->setActiveScan(true); //active scan uses more power, but get results faster
-  pBLEScan->setInterval(100);
+  pBLEScan->setInterval(200);
   pBLEScan->setWindow(99); // less or equal setInterval value
 }
 
